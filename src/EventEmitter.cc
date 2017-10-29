@@ -6,7 +6,7 @@ Napi::FunctionReference EventEmitter::constructor;
 
 Napi::Object EventEmitter::Init(Napi::Env env, Napi::Object exports) {
   Napi::HandleScope scope(env);
-  
+
   Napi::Function func = DefineClass(env, "EventEmitter", {
     InstanceMethod("on", &EventEmitter::On),
     InstanceMethod("once", &EventEmitter::Once),
@@ -14,6 +14,15 @@ Napi::Object EventEmitter::Init(Napi::Env env, Napi::Object exports) {
     InstanceMethod("listenerCount", &EventEmitter::ListenerCount),
     InstanceMethod("listeners", &EventEmitter::Listeners)
   });
+
+  // require('events').EventEmitter :(
+  napi_set_named_property(env, func, "EventEmitter", func);
+
+  // this is probably important
+  napi_set_named_property(env, func, "usingDomains", Napi::Boolean::New(env, false));
+
+  // TODO: make getter/setter
+  napi_set_named_property(env, func, "defaultMaxListeners", Napi::Number::New(env, EventEmitter::defaultMaxListeners));
 
   constructor = Napi::Persistent(func);
   constructor.SuppressDestruct();

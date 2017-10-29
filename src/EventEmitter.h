@@ -24,6 +24,8 @@ class EventEmitter : public Napi::ObjectWrap<EventEmitter> {
 
   std::map<Napi::String, std::vector<Napi::Function>> every;
   std::map<Napi::String, std::vector<Napi::Function>> once;
+
+  static const int defaultMaxListeners = 10;
 };
 
 #endif

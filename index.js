@@ -1,1 +1,2 @@
-module.exports = require('bindings')('EventEmitter');
+const { EventEmitter } = require('bindings')('EventEmitter');
+module.exports = EventEmitter;
