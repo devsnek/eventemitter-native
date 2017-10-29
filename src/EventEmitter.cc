@@ -124,7 +124,7 @@ Napi::Value EventEmitter::Listeners(const Napi::CallbackInfo& info) {
   bool hasOnce = this->HasOnceEvent(name);
   bool hasEvery = this->HasEveryEvent(name);
 
-  if (!hasOnce && hasEvery)
+  if (!hasOnce && !hasEvery)
     return Napi::Array::New(env, 0);
 
   Napi::Array array = Napi::Array::New(env, once.size());
