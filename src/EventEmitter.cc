@@ -32,16 +32,11 @@ Napi::Object EventEmitter::Init(Napi::Env env, Napi::Object exports) {
   return exports;
 }
 
+
 EventEmitter::EventEmitter(const Napi::CallbackInfo& info) : Napi::ObjectWrap<EventEmitter>(info) {
   Napi::Env env = info.Env();
   Napi::HandleScope scope(env);
 };
-
-Napi::Object EventEmitter::NewInstance(Napi::Env env) {
-  Napi::EscapableHandleScope scope(env);
-  Napi::Object obj = constructor.New({});
-  return scope.Escape(napi_value(obj)).ToObject();
-}
 
 bool EventEmitter::HasEveryEvent(Napi::String name) {
   return this->every.find(name) != this->every.end();

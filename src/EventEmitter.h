@@ -7,7 +7,6 @@
 class EventEmitter : public Napi::ObjectWrap<EventEmitter> {
  public:
   static Napi::Object Init(Napi::Env env, Napi::Object exports);
-  static Napi::Object NewInstance(Napi::Env env);
   EventEmitter(const Napi::CallbackInfo& info);
 
  private:
