@@ -30,6 +30,7 @@ class EventEmitter : public Napi::ObjectWrap<EventEmitter> {
 
   std::map<Napi::String, std::vector<Napi::Function>> every;
   std::map<Napi::String, std::vector<Napi::Function>> once;
+  bool warned = false;
   int maxListeners;
 };
 

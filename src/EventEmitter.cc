@@ -55,6 +55,8 @@ Napi::Value EventEmitter::GetDefaultMaxListeners(const Napi::CallbackInfo& info)
 }
 
 void EventEmitter::CheckListenerCount(Napi::Env env, Napi::String name) {
+  if (this->warned) return;
+
   size_t count = 0;
   if (this->HasEveryEvent(name))
     count += this->every[name].size();
@@ -70,11 +72,11 @@ void EventEmitter::CheckListenerCount(Napi::Env env, Napi::String name) {
   // TODO: better message
   Napi::Error err = Napi::Error::New(env, "Possible EventEmitter memory leak detected.");
   err.Set("name", Napi::String::New(env, "MaxListenersExceededWarning"));
-  // err.Set("emitter", this);
+  err.Set("emitter", *this);
   err.Set("type", name);
   err.Set("count", Napi::Number::New(env, (int)count));
-
-  // emitWarning({ err }); convert Napi::Error to Napi::Value
+  this->warned = true;
+  // emitWarning({ err }); can't convert Napi::Error to Napi::Value :(
 }
 
 Napi::Value EventEmitter::On(const Napi::CallbackInfo& info) {
@@ -117,16 +119,19 @@ Napi::Value EventEmitter::Emit(const Napi::CallbackInfo& info) {
     return Napi::Boolean::New(env, false);
 
   std::vector<napi_value> callArgs;
+  callArgs.resize(info.Length() - 1);
   for (size_t i = 1; i < info.Length(); i++)
     callArgs[i - 1] = info[i];
 
   if (hasEvery) {
-    for (Napi::Function const& handler: this->every[name])
+    std::vector<Napi::Function> copy(this->every[name].begin(), this->every[name].end());
+    for (Napi::Function const& handler: copy)
       handler.Call(callArgs);
   }
 
   if (hasOnce) {
-    for (Napi::Function const& handler: this->once[name])
+    std::vector<Napi::Function> copy(this->once[name].begin(), this->once[name].end());
+    for (Napi::Function const& handler: copy)
       handler.Call(callArgs);
 
     this->once.erase(name);
