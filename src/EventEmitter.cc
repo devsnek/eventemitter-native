@@ -84,10 +84,7 @@ Napi::Value EventEmitter::On(const Napi::CallbackInfo& info) {
   Napi::String name = info[0].As<Napi::String>();
   Napi::Function handler = info[1].As<Napi::Function>();
 
-  if (!this->HasEveryEvent(name))
-    this->every[name] = {};
-
-  this->every[name].push_back(handler);
+  this->every[name].push_back(Napi::Reference<Napi::Function>::New(handler, 1));
 
   this->CheckListenerCount(env, name);
 
@@ -99,10 +96,7 @@ Napi::Value EventEmitter::Once(const Napi::CallbackInfo& info) {
   Napi::String name = info[0].As<Napi::String>();
   Napi::Function handler = info[1].As<Napi::Function>();
 
-  if (!this->HasOnceEvent(name))
-    this->once[name] = {};
-
-  this->once[name].push_back(handler);
+  this->once[name].push_back(Napi::Reference<Napi::Function>::New(handler, 1));
 
   this->CheckListenerCount(env, name);
 
@@ -124,15 +118,21 @@ Napi::Value EventEmitter::Emit(const Napi::CallbackInfo& info) {
     callArgs[i - 1] = info[i];
 
   if (hasEvery) {
-    std::vector<Napi::Function> copy(this->every[name].begin(), this->every[name].end());
-    for (Napi::Function const& handler: copy)
-      handler.Call(callArgs);
+    std::vector<Napi::Function> list;
+    for (Napi::FunctionReference &ref : this->every[name])
+      list.push_back(ref.Value());
+    for (Napi::Function &func : list)
+      func.Call(callArgs);
   }
 
   if (hasOnce) {
-    std::vector<Napi::Function> copy(this->once[name].begin(), this->once[name].end());
-    for (Napi::Function const& handler: copy)
-      handler.Call(callArgs);
+    std::vector<Napi::Function> list;
+    for (Napi::FunctionReference &ref: this->every[name])
+      list.push_back(ref.Value());
+
+    for (Napi::Function &func: list)
+      func.Call(callArgs);
+
 
     this->once.erase(name);
   }
@@ -163,29 +163,27 @@ Napi::Value EventEmitter::Listeners(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   Napi::String name = info[0].As<Napi::String>();
 
-  std::vector<Napi::Function> once = this->once[name];
-  std::vector<Napi::Function> every = this->every[name];
-  bool hasOnce = this->HasOnceEvent(name);
-  bool hasEvery = this->HasEveryEvent(name);
+  // bool hasOnce = this->HasOnceEvent(name);
+  // bool hasEvery = this->HasEveryEvent(name);
 
-  if (!hasOnce && !hasEvery)
+  // if (!hasOnce && !hasEvery)
     return Napi::Array::New(env, 0);
 
-  Napi::Array array = Napi::Array::New(env, once.size());
+  /*Napi::Array array = Napi::Array::New(env, once.size() + every.size());
 
   if (hasOnce) {
     for (size_t i = 0; i < once.size(); i++)
-      array[i] = every[i];
+      array[i] = every[i].Value();
   }
 
   if (hasEvery) {
     size_t offset = hasOnce ? once.size() : 0;
     for (size_t i = 0; i < every.size(); i++)
-      array[i + offset] = every[i];
+      array[i + offset] = every[i].Value();
   }
 
   // FIXME: array always filled with 5s
-  return array;
+  return array;*/
 }
 
 Napi::Value EventEmitter::SetMaxListeners(const Napi::CallbackInfo& info) {

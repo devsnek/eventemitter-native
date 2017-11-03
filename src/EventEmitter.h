@@ -28,8 +28,12 @@ class EventEmitter : public Napi::ObjectWrap<EventEmitter> {
   bool HasOnceEvent(Napi::String);
   bool HasEveryEvent(Napi::String);
 
-  std::map<Napi::String, std::vector<Napi::Function>> every;
-  std::map<Napi::String, std::vector<Napi::Function>> once;
+  typedef std::vector<Napi::FunctionReference> Handlers;
+  typedef std::map<std::string, Handlers> HandlersMap;
+
+  HandlersMap every;
+  HandlersMap once;
+
   bool warned = false;
   int maxListeners;
 };
