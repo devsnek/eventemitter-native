@@ -8,13 +8,10 @@ class EventEmitter : public Napi::ObjectWrap<EventEmitter> {
  public:
   static Napi::Object Init(Napi::Env env, Napi::Object exports);
   EventEmitter(const Napi::CallbackInfo& info);
+  static int defaultMaxListeners;
 
  private:
   static Napi::FunctionReference constructor;
-  static int defaultMaxListeners;
-
-  Napi::Value SetDefaultMaxListeners(const Napi::CallbackInfo& info, const Napi::Value& value);
-  Napi::Value GetDefaultMaxListeners(const Napi::CallbackInfo& info);
 
   Napi::Value On(const Napi::CallbackInfo& info);
   Napi::Value Once(const Napi::CallbackInfo& info);

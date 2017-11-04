@@ -5,6 +5,14 @@
 Napi::FunctionReference EventEmitter::constructor;
 int EventEmitter::defaultMaxListeners;
 
+void SetDefaultMaxListeners(const Napi::CallbackInfo& info, const Napi::Value& value) {
+  EventEmitter::defaultMaxListeners = value.As<Napi::Number>();
+}
+
+Napi::Value GetDefaultMaxListeners(const Napi::CallbackInfo& info) {
+  return Napi::Number::New(info.Env(), EventEmitter::defaultMaxListeners);
+}
+
 Napi::Object EventEmitter::Init(Napi::Env env, Napi::Object exports) {
   Napi::HandleScope scope(env);
 
@@ -19,8 +27,7 @@ Napi::Object EventEmitter::Init(Napi::Env env, Napi::Object exports) {
     InstanceMethod("setMaxListeners", &EventEmitter::SetMaxListeners),
     StaticValue("usingDomains", Napi::Boolean::New(env, false), napi_enumerable),
     // FIXME: weird type issues with getter and setter
-    /*StaticAccessor("defaultMaxListeners",
-        &EventEmitter::GetDefaultMaxListeners, &EventEmitter::SetDefaultMaxListeners, napi_enumerable),*/
+    StaticAccessor("defaultMaxListeners", GetDefaultMaxListeners, SetDefaultMaxListeners, napi_enumerable),
   });
 
   constructor = Napi::Persistent(func);
@@ -45,15 +52,6 @@ bool EventEmitter::HasOnceEvent(Napi::String name) {
   return this->once.find(name) != this->once.end();
 }
 
-Napi::Value EventEmitter::SetDefaultMaxListeners(const Napi::CallbackInfo& info, const Napi::Value& value) {
-  EventEmitter::defaultMaxListeners = value.As<Napi::Number>();
-  return value;
-}
-
-Napi::Value EventEmitter::GetDefaultMaxListeners(const Napi::CallbackInfo& info) {
-  return Napi::Number::New(info.Env(), EventEmitter::defaultMaxListeners);
-}
-
 void EventEmitter::CheckListenerCount(Napi::Env env, Napi::String name) {
   if (this->warned) return;
 
@@ -70,13 +68,18 @@ void EventEmitter::CheckListenerCount(Napi::Env env, Napi::String name) {
   Napi::Function emitWarning = process.Get("emitWarning").As<Napi::Function>();
 
   // TODO: better message
-  Napi::Error err = Napi::Error::New(env, "Possible EventEmitter memory leak detected.");
+  char message[256];
+  sprintf(message,
+      "Possible EventEmitter memory leak detected. %zu %s listeners added. "
+      "Use emitter.setMaxListeners() to increase limit",
+      count, name);
+  Napi::Error err = Napi::Error::New(env, message);
   err.Set("name", Napi::String::New(env, "MaxListenersExceededWarning"));
   err.Set("emitter", *this);
   err.Set("type", name);
   err.Set("count", Napi::Number::New(env, (int)count));
   this->warned = true;
-  // emitWarning({ err }); can't convert Napi::Error to Napi::Value :(
+  emitWarning({ err.Value() });
 }
 
 Napi::Value EventEmitter::On(const Napi::CallbackInfo& info) {
@@ -133,7 +136,6 @@ Napi::Value EventEmitter::Emit(const Napi::CallbackInfo& info) {
     for (Napi::Function &func: list)
       func.Call(callArgs);
 
-
     this->once.erase(name);
   }
 
@@ -161,29 +163,7 @@ Napi::Value EventEmitter::ListenerCount(const Napi::CallbackInfo& info) {
 
 Napi::Value EventEmitter::Listeners(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
-  Napi::String name = info[0].As<Napi::String>();
-
-  // bool hasOnce = this->HasOnceEvent(name);
-  // bool hasEvery = this->HasEveryEvent(name);
-
-  // if (!hasOnce && !hasEvery)
-    return Napi::Array::New(env, 0);
-
-  /*Napi::Array array = Napi::Array::New(env, once.size() + every.size());
-
-  if (hasOnce) {
-    for (size_t i = 0; i < once.size(); i++)
-      array[i] = every[i].Value();
-  }
-
-  if (hasEvery) {
-    size_t offset = hasOnce ? once.size() : 0;
-    for (size_t i = 0; i < every.size(); i++)
-      array[i + offset] = every[i].Value();
-  }
-
-  // FIXME: array always filled with 5s
-  return array;*/
+  return Napi::Array::New(env, 0);
 }
 
 Napi::Value EventEmitter::SetMaxListeners(const Napi::CallbackInfo& info) {
