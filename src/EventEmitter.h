@@ -24,6 +24,7 @@ class EventEmitter : public Napi::ObjectWrap<EventEmitter> {
 
   bool HasOnceEvent(Napi::String);
   bool HasEveryEvent(Napi::String);
+  bool InternalEmit(Napi::String, std::vector<napi_value>);
 
   typedef std::vector<Napi::FunctionReference> Handlers;
   typedef std::map<std::string, Handlers> HandlersMap;

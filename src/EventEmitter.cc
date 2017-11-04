@@ -87,6 +87,8 @@ Napi::Value EventEmitter::On(const Napi::CallbackInfo& info) {
   Napi::String name = info[0].As<Napi::String>();
   Napi::Function handler = info[1].As<Napi::Function>();
 
+  this->InternalEmit(Napi::String::New(env, "newListener"), { name, handler });
+
   this->every[name].push_back(Napi::Reference<Napi::Function>::New(handler, 1));
 
   this->CheckListenerCount(env, name);
@@ -99,6 +101,8 @@ Napi::Value EventEmitter::Once(const Napi::CallbackInfo& info) {
   Napi::String name = info[0].As<Napi::String>();
   Napi::Function handler = info[1].As<Napi::Function>();
 
+  this->InternalEmit(Napi::String::New(env, "newListener"), { name, handler });
+
   this->once[name].push_back(Napi::Reference<Napi::Function>::New(handler, 1));
 
   this->CheckListenerCount(env, name);
@@ -107,25 +111,28 @@ Napi::Value EventEmitter::Once(const Napi::CallbackInfo& info) {
 }
 
 Napi::Value EventEmitter::Emit(const Napi::CallbackInfo& info) {
-  Napi::Env env = info.Env();
   Napi::String name = info[0].As<Napi::String>();
 
+  std::vector<napi_value> args;
+  args.resize(info.Length() - 1);
+  for (size_t i = 1; i < info.Length(); i++)
+    args[i - 1] = info[i];
+
+  return Napi::Boolean::New(info.Env(), this->InternalEmit(name, args));
+}
+
+bool EventEmitter::InternalEmit(Napi::String name, std::vector<napi_value> args) {
   bool hasOnce = this->HasOnceEvent(name);
   bool hasEvery = this->HasEveryEvent(name);
   if (!hasOnce && !hasEvery)
-    return Napi::Boolean::New(env, false);
-
-  std::vector<napi_value> callArgs;
-  callArgs.resize(info.Length() - 1);
-  for (size_t i = 1; i < info.Length(); i++)
-    callArgs[i - 1] = info[i];
+    return false;
 
   if (hasEvery) {
     std::vector<Napi::Function> list;
     for (Napi::FunctionReference &ref : this->every[name])
       list.push_back(ref.Value());
     for (Napi::Function &func : list)
-      func.Call(callArgs);
+      func.Call(args);
   }
 
   if (hasOnce) {
@@ -134,13 +141,12 @@ Napi::Value EventEmitter::Emit(const Napi::CallbackInfo& info) {
       list.push_back(ref.Value());
 
     for (Napi::Function &func: list)
-      func.Call(callArgs);
+      func.Call(args);
 
     this->once.erase(name);
   }
 
-
-  return Napi::Boolean::New(env, true);
+  return true;
 }
 
 Napi::Value EventEmitter::ListenerCount(const Napi::CallbackInfo& info) {
