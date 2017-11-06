@@ -26,7 +26,6 @@ Napi::Object EventEmitter::Init(Napi::Env env, Napi::Object exports) {
     InstanceMethod("listeners", &EventEmitter::Listeners),
     InstanceMethod("setMaxListeners", &EventEmitter::SetMaxListeners),
     StaticValue("usingDomains", Napi::Boolean::New(env, false), napi_enumerable),
-    // FIXME: weird type issues with getter and setter
     StaticAccessor("defaultMaxListeners", GetDefaultMaxListeners, SetDefaultMaxListeners, napi_enumerable),
   });
 
@@ -72,7 +71,7 @@ void EventEmitter::CheckListenerCount(Napi::Env env, Napi::String name) {
   sprintf(message,
       "Possible EventEmitter memory leak detected. %zu %s listeners added. "
       "Use emitter.setMaxListeners() to increase limit",
-      count, name);
+      count, name.Utf8Value().c_str());
   Napi::Error err = Napi::Error::New(env, message);
   err.Set("name", Napi::String::New(env, "MaxListenersExceededWarning"));
   err.Set("emitter", *this);
